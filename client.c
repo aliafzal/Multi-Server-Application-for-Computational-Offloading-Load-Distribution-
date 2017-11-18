@@ -1,68 +1,65 @@
-//////////////////////Ali Afzal///////////////
-/////////////////////E-12-008/////////////////
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <netdb.h>
-
-
-void error (const char *msg)
-	{
-		perror(msg);
-		exit(0);
-	}
-
-int main(int argc,char *argv[])
+#include<stdio.h> 
+#include<string.h>   
+#include<sys/socket.h>   
+#include<arpa/inet.h>
+#include<unistd.h>
+ 
+int main(int argc , char *argv[])
 {
-	int sockfd,portno,n,n2;
-	struct sockaddr_in serv_addr;
-	struct hostent *server;
-	char buffer [256];
-	if (argc<3)
-	{
-            fprintf (stderr,"usage %s hostname port\n", argv[0]);
-	    exit (0);
-	}
 
-    	portno=atoi(argv[2]);
-    	sockfd=socket(AF_INET,SOCK_STREAM,0);
- 	if (sockfd<0)
-	error ("ERROR opening socket");
-	server=gethostbyname(argv[1]);
-	if (server==NULL)
+	
+	int sock,ch;
+	struct sockaddr_in aws_servaddr;
+	char function[5],val[15],s_data[20],aws_reply[256];
+	int inp_val;
+//////////// setting server socket address take from TCP code sample for beej's guide starts     
+	sock = socket(AF_INET , SOCK_STREAM , 0);
+	if (sock == -1)
 	{
-		fprintf (stderr,"ERROR, no such host\n");
-		exit (0);
+		printf("Could not create socket");
 	}
+	
+	aws_servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	aws_servaddr.sin_family = AF_INET;
+	aws_servaddr.sin_port = htons( 25159 );
 
-	bzero ((char *)&serv_addr,sizeof(serv_addr));
-	serv_addr.sin_family=AF_INET;
-	bcopy((char *)server->h_addr,(char*)&serv_addr.sin_addr.s_addr,server->h_length);
-	serv_addr.sin_port=htons(portno);
-	if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr))<0)
-	error("ERROR cnnecting");
-	bzero(buffer,256);
-	printf("Enter first number  : ");
-	fgets(buffer,255,stdin);
-	n=write(sockfd,buffer,strlen(buffer));
-	printf("Enter second number  : ");
-	fgets(buffer,255,stdin);
-	n=write(sockfd,buffer,strlen(buffer));
-	printf("Enter Operator  : ");
-	fgets(buffer,255,stdin);
-	n=write(sockfd,buffer,strlen(buffer));	
-	if (n<0)
-	error ("ERROR writing to socket");
-	bzero(buffer,256);
-	n=read(sockfd,buffer,255);
-	n2=atoi(buffer);
-	printf("Message from server : %d",n2);
-	if (n<0)
-	error("ERROR reading from socket");
-	close (sockfd);
+//////////////////////////ends
+	if (connect(sock , (struct sockaddr *)&aws_servaddr , sizeof(aws_servaddr)) < 0)
+	{
+		perror("connect failed. Error");
+		return 1;
+	}
+	printf("The client is up and running\n");
+	strcpy(function,argv[1]);
+	strcpy(val,argv[2]);
+//////////////////////////sending right data to aws server 
+	if(strcmp(function,"DIV"))
+	{
+		strcpy(function,"1");
+		strcpy(s_data,function);
+		strcat(s_data,val);
+		ch = write(sock,s_data,strlen(s_data));
+		printf("The client sent < %s > and %s to AWS \n",val,argv[1]);
+		if(ch<0)
+		puts("Sending failed");
+	}
+	else if(strcmp(function,"LOG"))
+	{
+		strcpy(function,"2");
+		strcpy(s_data,function);
+		strcat(s_data,val);
+		ch = write(sock,s_data,strlen(s_data));
+		printf("The client sent < %s > and %s to AWS \n",val,argv[1]);
+		if(ch<0)
+		puts("Sending failed");
+	}
+//receving data from aws server
+	bzero(aws_reply,255);
+	if(read(sock,aws_reply,255) < 0)
+	{
+	    puts("recv failed");
+	}
+	printf("According to AWS, %s on < %s >:< %s > \n",argv[1],val,aws_reply);	
+	close (sock);
 	return 0;
 }
